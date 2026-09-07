@@ -145,23 +145,78 @@ Two things matter here:
 
 ---
 
-## 7. Getting-Started Sequence for a New Project
+## 7. A Third File: `FACTS.md` — Stable Ground Truth (NOT read automatically by default)
+
+Distinct from both of the above:
+
+- `AGENTS.md` = **how to work** in this project (conventions, rules) — always read.
+- `DECISIONS.md` = **why** something was built a certain way (reasoning, tradeoffs) — read on demand or referenced.
+- `FACTS.md` = **static facts** about the system/project (hardware, versions, identifiers, config values already confirmed correct) — saves the agent from re-discovering the same ground truth every session.
+
+**Example** (for a Linux dotfiles/system-config project):
+
+```markdown
+# Hardware
+- Laptop: ThinkPad (EC/fan controller has a known firmware quirk)
+
+# Display Setup
+- eDP-1: built-in laptop panel
+- DP-5, DP-6: external monitors, L-shaped layout
+- Window manager has no true "primary monitor" concept — don't suggest
+  primary-monitor-based fixes
+
+# Software
+- WM: Hyprland (config migrating from `.conf` to Lua format)
+- Bar: Waybar
+```
+
+Only log facts that are **stable and verifiable** — not transient state (current CPU temp, today's process list, a one-off log line). Transient data logged as fact just goes stale and misleads future sessions.
+
+---
+
+## 8. Making Fact-Logging Automatic
+
+Same mechanism as decision logging: a rule in `AGENTS.md` (always read) pointing at `FACTS.md`.
+
+```markdown
+# Fact Logging
+When you discover a stable, verifiable fact that isn't already in
+FACTS.md (a hardware component, a software version, a config value
+confirmed correct, an identifier), append it to FACTS.md in this format:
+
+## <category>
+- <fact>, confirmed via <command or file that showed it>
+
+Only log facts that are stable and unlikely to change — not current
+state that changes often (running processes, live resource usage,
+today's log output). If a fact contradicts something already in
+FACTS.md, correct it in place instead of appending a duplicate.
+```
+
+Two details that matter:
+- **Overwrite, don't just append, on contradiction.** Facts occasionally turn out wrong (e.g. a driver misattributed at first). Appending a correction without removing the old line leaves two contradictory facts in the file, and the agent has no way to know which is current.
+- **Define what's transient vs. stable explicitly** — without that line, an agent may log every diagnostic output as a "fact" and bloat the file with noise that's irrelevant a day later.
+
+---
+
+## 9. Getting-Started Sequence for a New Project
 
 1. Think through the architecture and key decisions yourself first (don't let an agent "discover" the shape of the project by accident).
-2. Write those decisions into `DECISIONS.md` as a starting point.
-3. Write `AGENTS.md` with project layout, conventions, setup/build/test commands, and the decision-logging instruction above.
+2. Write those decisions into `DECISIONS.md` as a starting point, and any known stable facts into `FACTS.md`.
+3. Write `AGENTS.md` with project layout, conventions, setup/build/test commands, and the decision-logging and fact-logging instructions above.
 4. Scaffold the project with Junie/Codex, scoped to the initial structure.
 5. Build out features task-by-task, each in its own chat, scoping context to what each task actually touches.
 6. Bring in Claude specifically when a task requires resolving a real tradeoff — then capture the outcome in `DECISIONS.md` before handing the implementation to Junie/Codex.
 
 ---
 
-## 8. Token-Saving Checklist
+## 10. Token-Saving Checklist
 
 - ✅ One well-defined task per chat — don't bundle unrelated work
 - ✅ Reference specific files/folders instead of the whole repo when scope allows
 - ✅ Keep `AGENTS.md` short — it's injected into every single task
-- ✅ Use `DECISIONS.md` for rationale, referenced from `AGENTS.md` only if you want it auto-loaded everywhere
+- ✅ Use `DECISIONS.md` for rationale and `FACTS.md` for stable ground truth, referenced from `AGENTS.md` only if you want them auto-loaded everywhere
 - ✅ Use Claude for reasoning/tradeoffs, Junie/Codex for defined, mechanical work
 - ❌ Don't switch models mid-chat expecting savings — the accumulated context cost is the same
 - ❌ Don't dump the entire codebase into a prompt "just in case" — scope to blast radius
+- ❌ Don't log transient state as fact — it goes stale and misleads later sessions
